@@ -20,7 +20,7 @@ mysql = MySQL()
 app.secret_key = 'This is my secret key'
 
 # configure MYSQL
-server = 'localhost'
+server = 'NOTAIGBE-PC'
 database = 'EDHA'
 user = 'sa'
 password = 'adm1n'
@@ -30,6 +30,7 @@ password = 'adm1n'
 # app.config['MYSQL_DATABASE_DB'] = 'BucketList'
 # app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 # mysql.init_app(app)
+
 
 # helper function
 def check_password(acc_pass, provided_pass):
@@ -93,10 +94,10 @@ def validate():
         _title = request.form['inputTitle']
         print("Username:", _username, "\n Password:", _password)
 
-        storedProc = 'exec [EDHA].[dbo].[Login] @username = ?'
+        stored_proc = 'exec [EDHA].[dbo].[Login] @username = ?'
         params = _username
 
-        cursor.execute(storedProc, params)
+        cursor.execute(stored_proc, params)
         row = cursor.fetchone()
         while row:
             if len(row[3]) > 0:
@@ -133,8 +134,8 @@ def signUp():
 
     print("signing up user...")
     # create MySQL Connection
-    conn = mysql.connect()
-    # create a cursor to query the stored procedure
+    conn = po.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database +
+                      ';UID=' + user + ';PWD=' + password)
     cursor = conn.cursor()
 
     try:
@@ -187,7 +188,8 @@ def addwish():
             _description = request.form['inputDescription']
             _user = session.get('user')[0]
             print("title:", _title, "\n description:", _description, "\n user:", _user)
-            conn = mysql.connect()
+            conn = po.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database +
+                              ';UID=' + user + ';PWD=' + password)
             cursor = conn.cursor()
             cursor.callproc('sp_addWish', (_title, _description, _user))
             data = cursor.fetchall()
@@ -266,11 +268,11 @@ def getwish():
         if session.get('user'):
 
             _user = session.get('user')[3]
-            print(_user)
+            # print(_user)
 
-            storedProc = '{call [dbo].[GetBill_LawByTitle] (?)}'
+            stored_proc = '{call [dbo].[GetBill_LawByTitle] (?)}'
 
-            cursor.execute(storedProc, session['searchstring'])
+            cursor.execute(stored_proc, session['searchstring'])
             wishes = cursor.fetchall()
 
             wishes_dict = []
@@ -278,8 +280,8 @@ def getwish():
                 wish_dict = {
                     'Id': wish[0],
                     'Title': wish[1],
-                    'Description': wish[2],
-                    'Date': wish[10]}
+                    'Stage': wish[2],
+                    'Date': wish[10].strftime("%d %B %Y")}
                 wishes_dict.append(wish_dict)
                 print(wish_dict)
 

@@ -24,7 +24,9 @@
                     .attr('class', 'list-group-item active')
                     .append($('<h4>')
                         .attr('class', 'list-group-item-heading'),
-                        $('<p>')
+                        $('<li>')
+                        .attr('class', 'list-group-item-text'),
+                        $('<p1>')
                         .attr('class', 'list-group-item-text')));
                 var wishObj = JSON.parse(res);
 				var wish = '';
@@ -32,7 +34,8 @@
 				$.each(wishObj,function(index, value){
 					wish = $(div).clone();
 					$(wish).find('h4').text(value.Title);
-					$(wish).find('p').text(value.Description);
+					$(wish).find('li').text(value.Stage);
+					$(wish).find('p1').text(value.Date);
 					$('.jumbotron').append(wish);
                         });
                     },
@@ -66,6 +69,7 @@
             <div class="list-group">
                 <a href="#" class="list-group-item active">
                     <h4 class="list-group-item-heading">Law Title</h4>
+                    <p class="list-group-item-text">Current Stage</p>
                     <p class="list-group-item-text">Assent Date</p>
                 </a>
             </div>
