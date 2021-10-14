@@ -5,21 +5,23 @@ Created on Thu Dec 14 16:12:43 2017
 """
 
 # imports
-from flask import Flask, render_template, json, request, session, redirect
+from flask import Flask, render_template, json, request, session, redirect, send_from_directory
+from flask_mobility import Mobility
+from flask_mobility.decorators import mobile_template, mobilized
 from werkzeug.security import generate_password_hash, check_password_hash
 from flaskext.mysql import MySQL
-from os import getenv
-import pymssql
+import os
 import pyodbc as po
 
 # initialize the flask and SQL Objects
 app = Flask(__name__)
+Mobility(app)
 mysql = MySQL()
 
 # initialize secret key
 app.secret_key = 'This is my secret key'
 
-# configure MYSQL
+# configure MSSQL
 server = 'NOTAIGBE-PC'
 database = 'EDHA'
 user = 'sa'
@@ -42,6 +44,11 @@ def check_password(acc_pass, provided_pass):
 
 # define methods for routes (what to do and display)
 @app.route("/")
+def main():
+    return render_template('index.html')
+
+
+@mobilized(main)
 def main():
     return render_template('index.html')
 
@@ -75,10 +82,33 @@ def showuserhome():
         return render_template('error.html', error="Invalid User Credentials")
 
 
+@mobilized(showuserhome)
+def showuserhome():
+    # check that someone has logged in correctly
+    if session.get("user"):
+        return render_template('userHome.html', username=session.get("user")[3])
+    else:
+        return render_template('error.html', error="Invalid User Credentials")
+
+
 @app.route('/logout')
 def logout():
     session.pop('user', None)
     return redirect('/')
+
+
+@app.route("/downloads", methods=["GET", "POST"])
+def downloadfile():
+
+    data = request.get_json()
+    print(data)
+    try:
+        workingdir = os.path.abspath(os.getcwd())
+        filepath = workingdir + '/static/files/'
+        return send_from_directory(filepath, data)
+
+    except Exception as e:
+        return render_template('error.html', error="File not available on server. Contact admin to report this error")
 
 
 @app.route('/validateLogin', methods=['POST'])
@@ -212,51 +242,6 @@ def addwish():
         conn.close()
 
 
-@app.route('/getLaw', methods=['POST'])
-def getlaw():
-    print("in searchLaw")
-    conn = po.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database +
-                      ';UID=' + user + ';PWD=' + password)
-    cursor = conn.cursor()
-
-    try:
-        if session.get('user'):
-            _title = request.form['inputTitle']
-            # _description = request.form['inputDescription']
-            _user = session.get('user')[3]
-            # print("title:", _title, "\n description:", _description, "\n user:", _user)
-            # conn = mysql.connect()
-
-            storedProc = 'exec [EDHA].[dbo].[GetBill_LawbyTitle] @strVariable = ?'
-            params = "NURSING"
-
-            cursor.execute(storedProc, params)
-            # row = cursor.fetchone()
-            # cursor.callproc('GetBill_LawbyTitle', (_title))
-            wishes = cursor.fetchall()
-
-            wishes_dict = []
-            for wish in wishes:
-                wish_dict = {
-                    'Id': wish[0],
-                    'Title': wish[1],
-                    'Description': wish[2],
-                    'Date': wish[10]}
-                wishes_dict.append(wish_dict)
-
-            return json.dumps(wishes_dict)
-
-        else:
-            return render_template('error.html', error='Unauthorized Access')
-    except Exception as e:
-        print("in exception for AddWish")
-        return render_template('error.html', error=str(e))
-
-    finally:
-        cursor.close()
-        conn.close()
-
-
 @app.route('/getWish')
 def getwish():
     conn = po.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database +
@@ -274,14 +259,15 @@ def getwish():
 
             cursor.execute(stored_proc, session['searchstring'])
             wishes = cursor.fetchall()
-
             wishes_dict = []
             for wish in wishes:
                 wish_dict = {
                     'Id': wish[0],
                     'Title': wish[1],
                     'Stage': wish[2],
-                    'Date': wish[10].strftime("%d %B %Y")}
+                    'Date': wish[10],
+                    'Short_Title': wish[11]}
+
                 wishes_dict.append(wish_dict)
                 print(wish_dict)
 
@@ -299,4 +285,4 @@ def getwish():
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000, debug=True)
