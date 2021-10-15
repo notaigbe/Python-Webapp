@@ -113,16 +113,19 @@ def downloadfile():
 
 @app.route('/validateLogin', methods=['POST'])
 def validate():
+    """
+        method to search and validate a user in the MSSQL Database and return the laws matching the search string
+    """
     conn = po.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database +
                       ';UID=' + user + ';PWD=' + password)
     cursor = conn.cursor()
     try:
-        # _username = request.form['inputUsername']
-        # _password = request.form['inputPassword']
-        _username = 'notaigbe'
-        _password = 'adm1n'
+        _username = request.form['inputUsername']
+        _password = request.form['inputPassword']
+        # _username = 'notaigbe'
+        # _password = 'adm1n'
         _title = request.form['inputTitle']
-        print("Username:", _username, "\n Password:", _password)
+        # print("Username:", _username, "\n Password:", _password)
 
         stored_proc = 'exec [EDHA].[dbo].[Login] @username = ?'
         params = _username
@@ -134,9 +137,9 @@ def validate():
                 if check_password(row[4], _password):
                     session['user'] = row[3]
                     session['searchstring'] = _title
-                    print(row[1] or '')
+                    # print(row[1] or '')
                     # actually validate these users
-                    print("ID=%d, Name=%s" % (row[0], row[1]))
+                    print(f"{row[3]} currently logged in...")
                     cursor.fetchone()
                     return render_template('/userHome.html', username=_username)
                 else:
@@ -150,10 +153,25 @@ def validate():
         print("Error: %s" % e)
 
     finally:
-        # disconnect from mysql database
+        # disconnect from mssql database
         cursor.close()
         del cursor
         conn.close()
+
+
+@app.route('/getLaw', methods=['POST'])
+def search():
+    """
+        method to search and return the laws matching the search string from the MSSQL Database
+    """
+    try:
+        _title = request.form['inputTitle']
+        session['searchstring'] = _title
+
+        return render_template('/userHome.html', username=session['user'])
+
+    except Exception as e:
+        print("Error: %s" % e)
 
 
 @app.route('/signUp', methods=['POST'])
@@ -247,7 +265,6 @@ def getwish():
     conn = po.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database +
                       ';UID=' + user + ';PWD=' + password)
 
-    # conn = mysql.connect()
     cursor = conn.cursor()
     try:
         if session.get('user'):

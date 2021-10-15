@@ -27,9 +27,9 @@
             type: 'GET',
             success: function(res) {
                 var div = $('<div>')
-                .attr('class', 'list-group shadow-sm')
+                .attr('class', 'list-group card shadow-sm')
                 .append($('<a href="#">')
-                    .attr('class', 'list-group-item active list-group-item-success bg-dark')
+                    .attr('class', 'list-group-item active bg-dark')
                     .append($('<h5>')
                         .attr('class', 'list-group-item-heading'),
                         $('<h6>')
@@ -71,16 +71,16 @@
                   </li>
                     <!---<a class="nav-link" href="wishlist">Search Laws</a>--->
                 </ul>
-                <form class="d-flex" action="/validateLogin" method="post">
-                    <input name="inputTitle" id="inputTitle" class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+                <form class="d-flex" action="/getLaw" method="post">
+                    <input name="inputTitle" id="inputTitle" class="form-control me-2" type="search" placeholder="Search" aria-label="type a word or phrase in the law">
                     <button id="btnSignIn" class="btn btn-outline-light" type="submit">Search</button>
                 </form>
             </div>
         </nav>
 
-        <div class="jumbotron bg-light">
+        <div class="jumbotron bg-light card shadow-sm">
             <h1 class="flex-sm-fill text-sm-center">Welcome to the EDHA Laws Repository {{username}}!</h1>
-            <div class="card shadow-sm">
+            <div>
                 <div class="card-body">
                 <a href="#" class="list-group-item active list-group-item-success bg-dark">
                     <h4 class="card-title">Short Title (Click to open)</h4>
