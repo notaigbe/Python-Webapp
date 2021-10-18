@@ -5,7 +5,7 @@ Created on Thu Dec 14 16:12:43 2017
 """
 
 # imports
-from flask import Flask, render_template, json, request, session, redirect, send_from_directory
+from flask import Flask, render_template, json, request, session, redirect, send_from_directory, url_for
 from flask_mobility import Mobility
 from flask_mobility.decorators import mobile_template, mobilized
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -302,4 +302,4 @@ def getwish():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
