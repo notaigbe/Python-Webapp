@@ -76,7 +76,7 @@ div#success{
 /* BASIC */
 
 html {
-  background-color: #56baed;
+  background-color: #247554;
 }
 
 body {
@@ -302,7 +302,7 @@ input[type=text]:placeholder {
   bottom: -10px;
   width: 0;
   height: 2px;
-  background-color: #56baed;
+  background-color: #55b598;
   content: "";
   transition: width 0.2s;
 }
@@ -322,7 +322,7 @@ input[type=text]:placeholder {
 }
 
 #icon {
-  width:50%;
+  width:40%;
 }
 
 #brandIcon {

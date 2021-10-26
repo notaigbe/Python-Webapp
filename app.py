@@ -5,18 +5,19 @@ Created on Thu Dec 14 16:12:43 2017
 """
 
 # imports
-from flask import Flask, render_template, json, request, session, redirect, send_from_directory, url_for
+import datetime
+
+from flask import Flask, render_template, json, request, session, redirect, send_from_directory, flash
 from flask_mobility import Mobility
 from flask_mobility.decorators import mobile_template, mobilized
 from werkzeug.security import generate_password_hash, check_password_hash
-from flaskext.mysql import MySQL
 import os
 import pyodbc as po
-
+from waitress import serve
+import logging
 # initialize the flask and SQL Objects
 app = Flask(__name__)
 Mobility(app)
-mysql = MySQL()
 
 # initialize secret key
 app.secret_key = 'This is my secret key'
@@ -26,7 +27,8 @@ server = 'NOTAIGBE-PC'
 database = 'EDHA'
 user = 'sa'
 password = 'adm1n'
-
+logger = logging.getLogger('waitress')
+logger.setLevel(logging.INFO)
 # app.config['MYSQL_DATABASE_USER'] = 'Arjun'
 # app.config['MYSQL_DATABASE_PASSWORD'] = '1377Hello!'
 # app.config['MYSQL_DATABASE_DB'] = 'BucketList'
@@ -68,9 +70,9 @@ def showsignin():
     return render_template('signin.html')
 
 
-@app.route('/wishlist')
-def wishlist():
-    return render_template('wishlist.html')
+# @app.route('/wishlist')
+# def wishlist():
+#    return render_template('wishlist.html')
 
 
 @app.route('/userHome')
@@ -79,6 +81,7 @@ def showuserhome():
     if session.get("user"):
         return render_template('userHome.html', username=session.get("user")[3])
     else:
+        flash(u'Invalid User Credentials', 'error')
         return render_template('error.html', error="Invalid User Credentials")
 
 
@@ -139,13 +142,15 @@ def validate():
                     session['searchstring'] = _title
                     # print(row[1] or '')
                     # actually validate these users
-                    print(f"{row[3]} currently logged in...")
+                    print(f"{row[1].capitalize()} {row[2].capitalize()} currently logged in...")
                     cursor.fetchone()
-                    return render_template('/userHome.html', username=_username)
+                    return render_template('/userHome.html', username=f"{row[1].capitalize()} {row[2].capitalize()}")
                 else:
-                    return render_template('error.html', error="incorrect username or password")
+                    flash('Invalid User Credentials')
+                    return render_template('index.html', error="incorrect username or password")
             else:
-                return render_template('error.html', error="incorrect username or password")
+                flash('Invalid User Credentials')
+                return render_template('index.html', error="incorrect username or password")
 
         print("called process")
 
@@ -177,45 +182,64 @@ def search():
 @app.route('/signUp', methods=['POST'])
 def signUp():
     """
-    method to deal with creating a new user in the MySQL Database
+    method to deal with creating a new user in the MSSQL Database
     """
 
-    print("signing up user...")
-    # create MySQL Connection
+    # create MSSQL Connection
     conn = po.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database +
                       ';UID=' + user + ';PWD=' + password)
     cursor = conn.cursor()
 
     try:
         # read in values from frontend
-        _name = request.form['inputName']
-        _email = request.form['inputEmail']
+        _firstname = request.form['inputFirstName']
+        _lastname = request.form['inputLastName']
+        _username = request.form['inputUsername']
         _password = request.form['inputPassword']
+        _confirmpassword = request.form['confirmPassword']
+        _designation = request.form['inputDesignation']
+        _department = request.form['inputDepartment']
+        _role = request.form['inputRole']
 
-        # Make sure we got all the values
-        if _name and _email and _password:
-            print("Email:", _email, "\n", "Name:", _name, "\n", "Password:", _password)
-            # hash passowrd for security
-            _hashed_password = generate_password_hash(_password)
-            print("Hashed Password:", _hashed_password)
+        # Make sure password length is greater than eight
+        if len(_password) >= 8:
+            if _password == _confirmpassword:
 
-            # call jQuery to make a POST request to the DB with the info
-            cursor.callproc('sp_createUser', (_name, _email, _password))
-            print("Successfully called sp_createUser")
-            # check if the POST request was successful
-            data = cursor.fetchall()
+                print("First Name:", _firstname, "\n", "Last Name:", _lastname, "\n", "Password:", _password, "Designation:"
+                      , _designation, "\n", "Department:", _department, "\n", "Role:", _role)
+                # hash password for security
+                _hashed_password = generate_password_hash(_password)
+                print("Hashed Password:", _hashed_password)
 
-            if len(data) == 0:
-                conn.commit()
-                print('signup successful!')
-                return 'User created successfully!'
+                # call jQuery to make a POST request to the DB with the info
+                # cursor.callproc('sp_createUser', (_name, _email, _password))
+                print("Successfully called sp_createUser")
+                stored_proc = 'exec [EDHA].[dbo].[CreateUser] (?,?,?,?,?,?,?)'
+                params = (_designation, _department, _lastname, _firstname, _username, _password, _role)
+
+                cursor.execute(stored_proc, params)
+
+                # check if the POST request was successful
+                data = cursor.fetchall()
+
+                if len(data) == 0:
+                    conn.commit()
+                    print('signup successful!')
+                    flash("User successfully created")
+                    return redirect(request.url)
+                else:
+                    print('error')
+                    return render_template('signup.html',
+                                           error="Registration unsuccessful. Please review your information")
+            # if not len(_password) >= 8:
             else:
                 print('error')
-                return str(data[0])
+                return render_template('signup.html', error="Password fields do not match. Check your password.")
 
         else:
             print('fields not submitted')
-            return 'Enter the required fields'
+            flash('fields not submitted')
+            return render_template('signup.html', error="password must be 8 characters or more")
 
     except Exception as ex:
         print('got an exception: ', ex)
@@ -303,3 +327,4 @@ def getwish():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+    # serve(app, listen='0.0.0.0:5000')
