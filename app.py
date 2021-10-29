@@ -7,6 +7,7 @@ Created on Thu Dec 14 16:12:43 2017
 # imports
 import datetime
 
+import pymssql
 from flask import Flask, render_template, json, request, session, redirect, send_from_directory, flash
 from flask_mobility import Mobility
 from flask_mobility.decorators import mobile_template, mobilized
@@ -15,6 +16,7 @@ import os
 import pyodbc as po
 from waitress import serve
 import logging
+
 # initialize the flask and SQL Objects
 app = Flask(__name__)
 Mobility(app)
@@ -29,6 +31,8 @@ user = 'sa'
 password = 'adm1n'
 logger = logging.getLogger('waitress')
 logger.setLevel(logging.INFO)
+
+
 # app.config['MYSQL_DATABASE_USER'] = 'Arjun'
 # app.config['MYSQL_DATABASE_PASSWORD'] = '1377Hello!'
 # app.config['MYSQL_DATABASE_DB'] = 'BucketList'
@@ -67,7 +71,7 @@ def showsignup():
 
 @app.route('/showSignIn')
 def showsignin():
-    return render_template('signin.html')
+    return render_template('index.html')
 
 
 # @app.route('/wishlist')
@@ -102,7 +106,6 @@ def logout():
 
 @app.route("/downloads", methods=["GET", "POST"])
 def downloadfile():
-
     data = request.get_json()
     print(data)
     try:
@@ -192,58 +195,52 @@ def signUp():
 
     try:
         # read in values from frontend
-        _firstname = request.form['inputFirstName']
-        _lastname = request.form['inputLastName']
-        _username = request.form['inputUsername']
+        _firstname = request.form['inputFirstName'].upper()
+        _lastname = request.form['inputLastName'].upper()
+        _username = request.form['inputUsername'].lower()
         _password = request.form['inputPassword']
-        _confirmpassword = request.form['confirmPassword']
-        _designation = request.form['inputDesignation']
-        _department = request.form['inputDepartment']
-        _role = request.form['inputRole']
+        _confirmPassword = request.form['confirmPassword']
+        _designation = request.form['inputDesignation'].upper()
+        _department = request.form['inputDepartment'].upper()
+        _role = request.form['inputRole'].upper()
 
-        # Make sure password length is greater than eight
-        if len(_password) >= 8:
-            if _password == _confirmpassword:
+        if _password != "" or _username != "" or _firstname != "" or _lastname != "" or _designation != "" or \
+                _department != "" or _role != "  ":
 
-                print("First Name:", _firstname, "\n", "Last Name:", _lastname, "\n", "Password:", _password, "Designation:"
-                      , _designation, "\n", "Department:", _department, "\n", "Role:", _role)
-                # hash password for security
-                _hashed_password = generate_password_hash(_password)
-                print("Hashed Password:", _hashed_password)
+            print("First Name:", _firstname, "\n", "Last Name:", _lastname, "\n", "Password:",
+                  _password, "Designation:", _designation, "\n", "Department:", _department, "\n", "Role:", _role)
+            # hash password for security
+            _hashed_password = generate_password_hash(_password)
+            print("Hashed Password:", _hashed_password)
 
-                # call jQuery to make a POST request to the DB with the info
-                # cursor.callproc('sp_createUser', (_name, _email, _password))
-                print("Successfully called sp_createUser")
-                stored_proc = 'exec [EDHA].[dbo].[CreateUser] (?,?,?,?,?,?,?)'
-                params = (_designation, _department, _lastname, _firstname, _username, _password, _role)
+            # call jQuery to make a POST request to the DB with the info
 
-                cursor.execute(stored_proc, params)
+            stored_proc = 'exec [EDHA].[dbo].[CreateUser] ?,?,?,?,?,?,?'
+            params = (_designation, _department, _lastname, _firstname, _username, _password, _role)
 
-                # check if the POST request was successful
-                data = cursor.fetchall()
+            cursor.execute(stored_proc, params)
+            cursor.commit()
+            # check if the POST request was successful
+            data = cursor.fetchall()
 
-                if len(data) == 0:
-                    conn.commit()
-                    print('signup successful!')
-                    flash("User successfully created")
-                    return redirect(request.url)
-                else:
-                    print('error')
-                    return render_template('signup.html',
-                                           error="Registration unsuccessful. Please review your information")
-            # if not len(_password) >= 8:
+            if len(data) == 0:
+                conn.commit()
+                print('signup successful!')
+                return json.dumps({'data': 'User created successfully!'})
             else:
                 print('error')
-                return render_template('signup.html', error="Password fields do not match. Check your password.")
+                return json.dumps({'error': str(data[0])})
 
         else:
-            print('fields not submitted')
+            print('error')
             flash('fields not submitted')
-            return render_template('signup.html', error="password must be 8 characters or more")
+            return render_template('signup.html', error="No data. This could be as a result of sending a previous page."
+                                                        "Reload the page to continue.")
 
     except Exception as ex:
         print('got an exception: ', ex)
-        return json.dumps({'error': str(ex)})
+        flash('duplicate username')
+        return render_template('signup.html', error=ex)
 
     finally:
         print('ending...')
